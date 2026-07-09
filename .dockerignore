@@ -1,0 +1,8 @@
+.git
+.gitignore
+.dockerignore
+bin/
+obj/
+TestResults/
+README.md
+k8s/

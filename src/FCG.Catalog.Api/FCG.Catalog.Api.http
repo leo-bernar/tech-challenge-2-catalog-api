@@ -1,0 +1,36 @@
+@host = http://localhost:5083
+@token = paste-jwt-here
+@gameId = paste-game-id-here
+
+GET {{host}}/
+
+###
+
+GET {{host}}/health
+
+###
+
+GET {{host}}/api/games
+
+###
+
+POST {{host}}/api/games
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Demo Game",
+  "description": "Game used to demonstrate the catalog flow.",
+  "developer": "FCG Studio",
+  "price": 59.90
+}
+
+###
+
+POST {{host}}/api/me/library/games/{{gameId}}
+Authorization: Bearer {{token}}
+
+###
+
+GET {{host}}/api/me/library/games
+Authorization: Bearer {{token}}
