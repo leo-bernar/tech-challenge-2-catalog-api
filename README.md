@@ -102,6 +102,77 @@ docker run --rm -p 8083:8080 \
   tech-challenge-2-catalog-api:latest
 ```
 
+## Docker Compose integrado
+
+Este repositorio e o local de orquestracao escolhido para a entrega, sem criar
+um quinto repositorio. O `docker-compose.yml` referencia os quatro
+microsservicos como contextos independentes em diretorios irmaos:
+
+```text
+tech-challenge-2-catalog-api/
+tech-challenge-2-users-api/
+tech-challenge-2-payments-api/
+tech-challenge-2-notifications-api/
+```
+
+Crie o arquivo local de variaveis:
+
+```bash
+cp .env.example .env
+```
+
+Preencha os placeholders em `.env`. A chave `TC2_JWT_KEY` deve ter pelo menos
+32 bytes e deve ser a mesma usada por UsersAPI e CatalogAPI. O arquivo `.env`
+nao deve ser versionado.
+
+Suba toda a aplicacao:
+
+```bash
+docker compose up --build -d
+```
+
+Servicos expostos por padrao:
+
+| Servico | URL |
+|---|---|
+| UsersAPI | `http://localhost:18080` |
+| CatalogAPI | `http://localhost:18081` |
+| PaymentsAPI | `http://localhost:18082` |
+| NotificationsAPI | `http://localhost:18083` |
+| RabbitMQ AMQP | `localhost:5672` |
+| RabbitMQ Management | `http://localhost:15672` |
+| SQL Server | `localhost,14333` |
+
+Execute o smoke test do fluxo completo:
+
+```bash
+set -a
+. ./.env
+set +a
+./scripts/smoke-test.sh
+```
+
+O script valida:
+
+- readiness de UsersAPI e CatalogAPI;
+- login do admin inicial;
+- criacao de jogo aprovado e jogo rejeitado;
+- cadastro de usuario;
+- compra aprovada adicionando jogo a biblioteca;
+- compra rejeitada sem adicionar jogo a biblioteca.
+
+Para acompanhar os eventos no video:
+
+```bash
+docker compose logs -f users-api catalog-api payments-api notifications-api
+```
+
+Para limpar containers e dados persistidos:
+
+```bash
+docker compose down -v
+```
+
 ## Kubernetes
 
 Os manifests ficam em `/k8s`, conforme exigido pelo enunciado.

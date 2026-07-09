@@ -19,7 +19,12 @@ public static class DependencyInjection
                 "Connection string 'CatalogDatabase' is not configured.");
 
         services.AddDbContext<CatalogDbContext>(options =>
-            options.UseSqlServer(connectionString));
+            options.UseSqlServer(
+                connectionString,
+                sql => sql.EnableRetryOnFailure(
+                    maxRetryCount: 10,
+                    maxRetryDelay: TimeSpan.FromSeconds(10),
+                    errorNumbersToAdd: null)));
 
         services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IUserGameRepository, UserGameRepository>();

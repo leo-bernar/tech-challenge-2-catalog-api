@@ -1,0 +1,134 @@
+name: fiap-cloud-games
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${TC2_SQL_PASSWORD:?Set TC2_SQL_PASSWORD in .env}
+    ports:
+      - "${TC2_SQL_PORT:-14333}:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ': > /dev/tcp/127.0.0.1/1433'"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${TC2_RABBITMQ_USERNAME:?Set TC2_RABBITMQ_USERNAME in .env}
+      RABBITMQ_DEFAULT_PASS: ${TC2_RABBITMQ_PASSWORD:?Set TC2_RABBITMQ_PASSWORD in .env}
+    ports:
+      - "${TC2_RABBITMQ_PORT:-5672}:5672"
+      - "${TC2_RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  users-api:
+    build:
+      context: ../tech-challenge-2-users-api
+      dockerfile: Dockerfile
+    image: tech-challenge-2-users-api:compose
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__UsersDatabase: "Server=sqlserver,1433;Database=FcgUsersDb;User Id=sa;Password=${TC2_SQL_PASSWORD:?Set TC2_SQL_PASSWORD in .env};TrustServerCertificate=True;Encrypt=False"
+      Jwt__Issuer: FCG
+      Jwt__Audience: FCG
+      Jwt__Key: ${TC2_JWT_KEY:?Set TC2_JWT_KEY in .env}
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__VirtualHost: /
+      RabbitMq__Username: ${TC2_RABBITMQ_USERNAME:?Set TC2_RABBITMQ_USERNAME in .env}
+      RabbitMq__Password: ${TC2_RABBITMQ_PASSWORD:?Set TC2_RABBITMQ_PASSWORD in .env}
+      AdminSeed__Enabled: "true"
+      AdminSeed__Name: FCG Admin
+      AdminSeed__Email: ${TC2_ADMIN_EMAIL:-admin@fcg.local}
+      AdminSeed__Password: ${TC2_ADMIN_PASSWORD:?Set TC2_ADMIN_PASSWORD in .env}
+    ports:
+      - "${TC2_USERS_PORT:-18080}:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  catalog-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tech-challenge-2-catalog-api:compose
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__CatalogDatabase: "Server=sqlserver,1433;Database=FcgCatalogDb;User Id=sa;Password=${TC2_SQL_PASSWORD:?Set TC2_SQL_PASSWORD in .env};TrustServerCertificate=True;Encrypt=False"
+      Jwt__Issuer: FCG
+      Jwt__Audience: FCG
+      Jwt__Key: ${TC2_JWT_KEY:?Set TC2_JWT_KEY in .env}
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__VirtualHost: /
+      RabbitMq__Username: ${TC2_RABBITMQ_USERNAME:?Set TC2_RABBITMQ_USERNAME in .env}
+      RabbitMq__Password: ${TC2_RABBITMQ_PASSWORD:?Set TC2_RABBITMQ_PASSWORD in .env}
+      RabbitMq__PaymentProcessedQueue: catalog-payment-processed
+    ports:
+      - "${TC2_CATALOG_PORT:-18081}:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  payments-api:
+    build:
+      context: ../tech-challenge-2-payments-api
+      dockerfile: Dockerfile
+    image: tech-challenge-2-payments-api:compose
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__VirtualHost: /
+      RabbitMq__Username: ${TC2_RABBITMQ_USERNAME:?Set TC2_RABBITMQ_USERNAME in .env}
+      RabbitMq__Password: ${TC2_RABBITMQ_PASSWORD:?Set TC2_RABBITMQ_PASSWORD in .env}
+      RabbitMq__OrderPlacedQueue: payments-order-placed
+      Payment__ApprovalLimit: "100.00"
+    ports:
+      - "${TC2_PAYMENTS_PORT:-18082}:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  notifications-api:
+    build:
+      context: ../tech-challenge-2-notifications-api
+      dockerfile: Dockerfile
+    image: tech-challenge-2-notifications-api:compose
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__VirtualHost: /
+      RabbitMq__Username: ${TC2_RABBITMQ_USERNAME:?Set TC2_RABBITMQ_USERNAME in .env}
+      RabbitMq__Password: ${TC2_RABBITMQ_PASSWORD:?Set TC2_RABBITMQ_PASSWORD in .env}
+      RabbitMq__UserCreatedQueue: notifications-user-created
+      RabbitMq__PaymentProcessedQueue: notifications-payment-processed
+    ports:
+      - "${TC2_NOTIFICATIONS_PORT:-18083}:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  sqlserver-data:
+  rabbitmq-data:

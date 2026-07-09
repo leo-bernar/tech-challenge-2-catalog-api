@@ -11,4 +11,5 @@ TestResults/
 *.db-shm
 *.db-wal
 appsettings.Local.json
+.env
 k8s/secret.local.yaml
