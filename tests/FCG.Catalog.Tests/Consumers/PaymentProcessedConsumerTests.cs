@@ -72,6 +72,89 @@ public sealed class PaymentProcessedConsumerTests
             .ExistsAsync(userId, game.Id, cancellationToken));
     }
 
+    [Theory]
+    [MemberData(nameof(InvalidMessages))]
+    public async Task ConsumeAsync_rejects_malformed_messages(
+        PaymentProcessedEvent message)
+    {
+        await using var fixture = new SqliteCatalogFixture();
+        await using var context = fixture.CreateContext();
+        var consumer = CreateConsumer(context);
+
+        await Assert.ThrowsAsync<InvalidPaymentProcessedMessageException>(() =>
+            consumer.ConsumeAsync(
+                message,
+                TestContext.Current.CancellationToken));
+    }
+
+    public static TheoryData<PaymentProcessedEvent> InvalidMessages()
+    {
+        var validOrderId = Guid.NewGuid();
+        var validUserId = Guid.NewGuid();
+        var validGameId = Guid.NewGuid();
+        var processedAtUtc = DateTime.UtcNow;
+
+        return
+        [
+            new PaymentProcessedEvent(
+                Guid.Empty,
+                processedAtUtc,
+                validUserId,
+                "user@example.com",
+                validGameId,
+                59.90m,
+                PaymentStatuses.Approved),
+            new PaymentProcessedEvent(
+                validOrderId,
+                default,
+                validUserId,
+                "user@example.com",
+                validGameId,
+                59.90m,
+                PaymentStatuses.Approved),
+            new PaymentProcessedEvent(
+                validOrderId,
+                processedAtUtc,
+                Guid.Empty,
+                "user@example.com",
+                validGameId,
+                59.90m,
+                PaymentStatuses.Approved),
+            new PaymentProcessedEvent(
+                validOrderId,
+                processedAtUtc,
+                validUserId,
+                "not-an-email",
+                validGameId,
+                59.90m,
+                PaymentStatuses.Approved),
+            new PaymentProcessedEvent(
+                validOrderId,
+                processedAtUtc,
+                validUserId,
+                "user@example.com",
+                Guid.Empty,
+                59.90m,
+                PaymentStatuses.Approved),
+            new PaymentProcessedEvent(
+                validOrderId,
+                processedAtUtc,
+                validUserId,
+                "user@example.com",
+                validGameId,
+                0,
+                PaymentStatuses.Approved),
+            new PaymentProcessedEvent(
+                validOrderId,
+                processedAtUtc,
+                validUserId,
+                "user@example.com",
+                validGameId,
+                59.90m,
+                "Pending")
+        ];
+    }
+
     private static PaymentProcessedConsumer CreateConsumer(
         FCG.Catalog.Infrastructure.Persistence.CatalogDbContext context)
     {

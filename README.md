@@ -57,9 +57,31 @@ dotnet test TechChallenge.Catalog.sln --configuration Release --no-restore
 dotnet run --project src/FCG.Catalog.Api/FCG.Catalog.Api.csproj
 ```
 
-Em `Development`, `appsettings.Development.json` contem valores locais para
-facilitar execucao. Em producao, injete todos os segredos por variaveis de
-ambiente ou Secret.
+`appsettings.Development.json` nao contem segredos. Em desenvolvimento, use
+variaveis de ambiente ou `dotnet user-secrets`.
+
+Opcao 1 - variaveis de ambiente:
+
+```bash
+export ConnectionStrings__CatalogDatabase='Server=localhost,1433;Database=FcgCatalogDb;User Id=sa;Password=<local-sql-password>;TrustServerCertificate=True'
+export Jwt__Key='<same-32-byte-or-longer-key-used-by-users-api>'
+export RabbitMq__Username='<rabbitmq-username>'
+export RabbitMq__Password='<rabbitmq-password>'
+dotnet run --project src/FCG.Catalog.Api/FCG.Catalog.Api.csproj
+```
+
+Opcao 2 - user-secrets:
+
+```bash
+dotnet user-secrets set 'ConnectionStrings:CatalogDatabase' 'Server=localhost,1433;Database=FcgCatalogDb;User Id=sa;Password=<local-sql-password>;TrustServerCertificate=True' --project src/FCG.Catalog.Api/FCG.Catalog.Api.csproj
+dotnet user-secrets set 'Jwt:Key' '<same-32-byte-or-longer-key-used-by-users-api>' --project src/FCG.Catalog.Api/FCG.Catalog.Api.csproj
+dotnet user-secrets set 'RabbitMq:Username' '<rabbitmq-username>' --project src/FCG.Catalog.Api/FCG.Catalog.Api.csproj
+dotnet user-secrets set 'RabbitMq:Password' '<rabbitmq-password>' --project src/FCG.Catalog.Api/FCG.Catalog.Api.csproj
+dotnet run --project src/FCG.Catalog.Api/FCG.Catalog.Api.csproj
+```
+
+Para comandos de migration com `dotnet ef`, forneca
+`ConnectionStrings__CatalogDatabase` como variavel de ambiente.
 
 ## Docker
 
@@ -74,8 +96,8 @@ docker run --rm -p 8083:8080 \
   -e RabbitMq__Host=host.docker.internal \
   -e RabbitMq__Port=5672 \
   -e RabbitMq__VirtualHost=/ \
-  -e RabbitMq__Username=guest \
-  -e RabbitMq__Password=guest \
+  -e RabbitMq__Username="<rabbitmq-username>" \
+  -e RabbitMq__Password="<rabbitmq-password>" \
   -e RabbitMq__PaymentProcessedQueue=catalog-payment-processed \
   tech-challenge-2-catalog-api:latest
 ```

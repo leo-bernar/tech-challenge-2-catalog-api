@@ -10,4 +10,5 @@ TestResults/
 *.db
 *.db-shm
 *.db-wal
+appsettings.Local.json
 k8s/secret.local.yaml

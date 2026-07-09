@@ -10,7 +10,8 @@ public sealed class CatalogDbContextFactory
     {
         var connectionString = Environment
             .GetEnvironmentVariable("ConnectionStrings__CatalogDatabase")
-            ?? "Server=localhost,1433;Database=FcgCatalogDb;User Id=sa;Password=CatalogSql1!;TrustServerCertificate=True";
+            ?? throw new InvalidOperationException(
+                "Connection string 'CatalogDatabase' must be provided by ConnectionStrings__CatalogDatabase when running EF Core design-time commands.");
 
         var options = new DbContextOptionsBuilder<CatalogDbContext>()
             .UseSqlServer(connectionString)
