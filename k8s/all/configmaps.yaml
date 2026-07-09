@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: users-api-config
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ASPNETCORE_HTTP_PORTS: "8080"
+  Jwt__Issuer: "FCG"
+  Jwt__Audience: "FCG"
+  Jwt__AccessTokenMinutes: "120"
+  RabbitMq__Host: "rabbitmq"
+  RabbitMq__Port: "5672"
+  RabbitMq__VirtualHost: "/"
+  AdminSeed__Enabled: "true"
+  AdminSeed__Name: "FCG Admin"
+  AdminSeed__Email: "admin@fcg.local"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catalog-api-config
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ASPNETCORE_HTTP_PORTS: "8080"
+  Jwt__Issuer: "FCG"
+  Jwt__Audience: "FCG"
+  RabbitMq__Host: "rabbitmq"
+  RabbitMq__Port: "5672"
+  RabbitMq__VirtualHost: "/"
+  RabbitMq__PaymentProcessedQueue: "catalog-payment-processed"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payments-api-config
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ASPNETCORE_HTTP_PORTS: "8080"
+  RabbitMq__Host: "rabbitmq"
+  RabbitMq__Port: "5672"
+  RabbitMq__VirtualHost: "/"
+  RabbitMq__OrderPlacedQueue: "payments-order-placed"
+  Payment__ApprovalLimit: "100.00"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notifications-api-config
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ASPNETCORE_HTTP_PORTS: "8080"
+  RabbitMq__Host: "rabbitmq"
+  RabbitMq__Port: "5672"
+  RabbitMq__VirtualHost: "/"
+  RabbitMq__UserCreatedQueue: "notifications-user-created"
+  RabbitMq__PaymentProcessedQueue: "notifications-payment-processed"

@@ -175,27 +175,96 @@ docker compose down -v
 
 ## Kubernetes
 
-Os manifests ficam em `/k8s`, conforme exigido pelo enunciado.
+Os manifests individuais da CatalogAPI ficam em `/k8s`, conforme exigido pelo
+enunciado. O deploy integrado para demonstracao fica em `/k8s/all`, no mesmo
+local de orquestracao do Docker Compose.
 
-Crie uma copia local do Secret:
+O diretorio `k8s/all` contem:
+
+- SQL Server: `Deployment`, `Service` e `Secret` gerado localmente;
+- RabbitMQ: `Deployment`, `Service` e `Secret` gerado localmente;
+- UsersAPI, CatalogAPI, PaymentsAPI e NotificationsAPI: `Deployment`,
+  `Service`, `ConfigMap` e `Secret` gerado localmente.
+
+Crie ou selecione um cluster Kind:
 
 ```bash
-cp k8s/secret.example.yaml k8s/secret.local.yaml
+kind create cluster --name fiap-cloud-games
+kubectl cluster-info --context kind-fiap-cloud-games
 ```
 
-Preencha os placeholders e aplique:
+Construa as imagens locais a partir dos quatro repositorios:
 
 ```bash
-kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/secret.local.yaml
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
+docker build -t tech-challenge-2-users-api:local ../tech-challenge-2-users-api
+docker build -t tech-challenge-2-catalog-api:local .
+docker build -t tech-challenge-2-payments-api:local ../tech-challenge-2-payments-api
+docker build -t tech-challenge-2-notifications-api:local ../tech-challenge-2-notifications-api
 ```
 
-Em Kind, carregue a imagem antes do deploy:
+Carregue as imagens no Kind:
 
 ```bash
-kind load docker-image tech-challenge-2-catalog-api:latest
+kind load docker-image tech-challenge-2-users-api:local --name fiap-cloud-games
+kind load docker-image tech-challenge-2-catalog-api:local --name fiap-cloud-games
+kind load docker-image tech-challenge-2-payments-api:local --name fiap-cloud-games
+kind load docker-image tech-challenge-2-notifications-api:local --name fiap-cloud-games
+```
+
+Gere o Secret local a partir das mesmas variaveis usadas no Docker Compose:
+
+```bash
+set -a
+. ./.env
+set +a
+./scripts/render-k8s-secrets.sh
+```
+
+O arquivo `k8s/all/secret.local.yaml` nao deve ser versionado. O template
+`k8s/all/secret.local.yaml.example` mostra a estrutura esperada.
+
+Execute o deploy integrado:
+
+```bash
+cd k8s/all
+kubectl apply -f .
+kubectl get pods
+cd ../..
+```
+
+Aguarde todos os Deployments:
+
+```bash
+kubectl rollout status deployment/sqlserver --timeout=5m
+kubectl rollout status deployment/rabbitmq --timeout=5m
+kubectl rollout status deployment/users-api --timeout=5m
+kubectl rollout status deployment/catalog-api --timeout=5m
+kubectl rollout status deployment/payments-api --timeout=5m
+kubectl rollout status deployment/notifications-api --timeout=5m
+```
+
+Execute o smoke test dentro do cluster usando port-forward:
+
+```bash
+set -a
+. ./.env
+set +a
+./scripts/kind-smoke-test.sh
+```
+
+Para acompanhar os eventos no video:
+
+```bash
+kubectl logs deployment/users-api --tail=80
+kubectl logs deployment/catalog-api --tail=80
+kubectl logs deployment/payments-api --tail=80
+kubectl logs deployment/notifications-api --tail=80
+```
+
+Para remover os recursos do cluster:
+
+```bash
+kubectl delete -f k8s/all
 ```
 
 ## Contratos de eventos

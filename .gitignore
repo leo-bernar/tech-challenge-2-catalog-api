@@ -13,3 +13,4 @@ TestResults/
 appsettings.Local.json
 .env
 k8s/secret.local.yaml
+k8s/all/secret.local.yaml
